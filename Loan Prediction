@@ -1,0 +1,422 @@
+## Loan Prediction ##
+
+# Importing necssary libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+warnings.filterwarnings('ignore')
+
+# Importing dataset
+train_original = pd.read_csv('train_ctrUa4K.csv')
+train = train_original.copy()
+train_original.columns
+train.head()
+train.isnull().sum() # There are null values in 'Gender','Married','Dependents','Self_Employed','LoanAmount',
+# 'Loan_Amount_Term','Credit_History'
+train.columns
+train.dtypes
+train.shape
+len(train.columns) # There are 13 feature columns
+
+# Target variable
+train['Loan_Status'].value_counts()
+train['Loan_Status'].value_counts(normalize = True) *100 # Percentage distribution
+train['Loan_Status'].value_counts().plot.bar()
+
+# Univariate analysis
+# Independent variables - Categorical
+train['Gender'].value_counts().plot.bar(figsize = (5,5), title = 'Gender') # Male < Female
+train['Married'].value_counts().plot.bar(figsize = (5,5), title = 'Married') # Married > Non - married
+train['Self_Employed'].value_counts().plot.bar(figsize = (5,5), title = 'Self_Employed') # No > Yes
+train['Credit_History'].value_counts().plot.bar(figsize = (5,5), title = 'Credit_History') # 1 > 0
+train['Dependents'].value_counts().plot.bar(figsize = (5,5), title = 'Dependents') # 0>2>1>3#
+train['Property_Area'].value_counts().plot.bar(figsize = (5,5), title = 'Property_Area') # Semiurban>urban>rural
+train['Education'].value_counts().plot.bar(figsize = (5,5), title = 'Education') # Graduate > Non graduate
+
+# Independent varaible - Numerical
+sns.distplot(train['ApplicantIncome']) # Right skewed
+train['ApplicantIncome'].plot.box() # Presence of outliers
+
+# Applicant income may depend on qualification of the applicant
+train.boxplot(column = 'ApplicantIncome', by = 'Education')
+# Outleirs are the high incomes of more number of graduates
+
+sns.distplot(train['CoapplicantIncome']) # Right skewed
+train['CoapplicantIncome'].plot.box() # Presence of outliers
+
+sns.distplot(train['LoanAmount']) # Looks normal 
+train['LoanAmount'].plot.box() # Presence of outliers
+
+# Bivaraite analysis
+# Categorical vs Target
+
+Gender = pd.crosstab(train['Gender'],train['Loan_Status'])
+Gender.div(Gender.sum(1).astype(float), axis = 0 ).plot(kind = 'bar', stacked = True, figsize = (4,4))
+# Not much difference
+
+Married = pd.crosstab(train['Married'],train['Loan_Status'])
+Married.div(Married.sum(1).astype(float), axis = 0 ).plot(kind = 'bar', stacked = True, figsize = (4,4))
+# Married > Not married
+
+Self_Employed = pd.crosstab(train['Self_Employed'],train['Loan_Status'])
+Self_Employed.div(Self_Employed.sum(1).astype(float), axis = 0 ).plot(kind = 'bar', stacked = True, figsize = (4,4))
+# Not much difference
+
+Education = pd.crosstab(train['Education'],train['Loan_Status'])
+Education.div(Education.sum(1).astype(float), axis = 0 ).plot(kind = 'bar', stacked = True, figsize = (4,4))
+# Graduate > Not graduate
+
+Dependents = pd.crosstab(train['Dependents'],train['Loan_Status'])
+Dependents.div(Dependents.sum(1).astype(float), axis = 0 ).plot(kind = 'bar', stacked = True, figsize = (4,4))
+
+Credit_History = pd.crosstab(train['Credit_History'],train['Loan_Status'])
+Credit_History.div(Credit_History.sum(1).astype(float), axis = 0 ).plot(kind = 'bar', stacked = True, figsize = (4,4))
+# 1>0
+
+Property_Area = pd.crosstab(train['Property_Area'],train['Loan_Status'])
+Property_Area.div(Property_Area.sum(1).astype(float), axis = 0 ).plot(kind = 'bar', stacked = True, figsize = (4,4))
+# Semiurban>urban>rural
+
+# Numerical vs Target
+
+train.groupby('Loan_Status')['ApplicantIncome'].mean().plot.bar()
+# There is not much difference noticable using mean
+# So, creating bins on 'ApplicantIncome'
+
+train['ApplicantIncome'].describe()
+bins = [150,2878,3813,5796,81000]
+group = ['Low','Average','High','Very High']
+
+train['Income_bins'] = pd.cut(train['ApplicantIncome'], bins, labels= group)
+train['Income_bins'].unique()
+train['Income_bins'].value_counts()
+
+Income_bin = pd.crosstab(train['Income_bins'],train['Loan_Status'])
+Income_bin.div(Income_bin.sum(1).astype(float), axis = 0 ).plot(kind = 'bar', stacked = True, figsize = (4,4))
+# No difference 
+# So, creating bins on 'CoapplicantIncome'
+train['CoapplicantIncome'].describe()
+bins = [0,1188,2297,41667]
+group = ['Low','Average','High']
+
+train['Co_income_bin'] = pd.cut(train['CoapplicantIncome'], bins, labels= group)
+train['Co_income_bin'].unique()
+train['Co_income_bin'].value_counts()
+
+Co_income_bin = pd.crosstab(train['Co_income_bin'],train['Loan_Status'])
+Co_income_bin.div(Co_income_bin.sum(1).astype(float), axis = 0 ).plot(kind = 'bar', stacked = True, figsize = (4,4))
+# Low income have more approvals which is contradictory to the general hypothesis
+# It is because many records don't have Coapplicants which is 0
+
+# Combining both 'ApplicantIncome' and  'CoapplicantIncome'
+
+train['Total_income_'] = train['ApplicantIncome']+train['CoapplicantIncome']
+
+sns.distplot(train['Total_income_']) # Looks normal 
+train['Total_income_'].plot.box() # Presence of outliers
+
+train['Total_income_'].describe()
+bins = [1442,4166,5416,7521,81000]
+group = ['Low','Average','High', 'Very High']
+
+train['Total_income'] = pd.cut(train['Total_income_'], bins, labels= group)
+train['Total_income'].unique()
+train['Total_income'].value_counts()
+
+Total_income = pd.crosstab(train['Total_income'],train['Loan_Status'])
+Total_income.div(Total_income.sum(1).astype(float), axis = 0 ).plot(kind = 'bar', stacked = True, figsize = (4,4))
+# Approvals with 'High Income' are slightly more than others
+
+# Loan amount 
+train['LoanAmount'].describe()
+bins = [9,100,128,168,700]
+group = ['Low','Average','High', 'Very High']
+
+train['LoanAmount_bin'] = pd.cut(train['LoanAmount'], bins, labels= group)
+train['LoanAmount_bin'].unique()
+train['LoanAmount_bin'].value_counts()
+
+LoanAmount_bin = pd.crosstab(train['LoanAmount_bin'],train['Loan_Status'])
+LoanAmount_bin.div(LoanAmount_bin.sum(1).astype(float), axis = 0 ).plot(kind = 'bar', stacked = True, figsize = (4,4))
+# Approvals for low, average, high are more than 'very high' 'loan amount'
+# Which is true according to the general hypothesis
+
+# Missing data 
+# Imputing all categorical variables with their modes
+train.dtypes
+train.columns
+train.isnull().sum()
+train['Gender'].fillna(train['Gender'].mode()[0], inplace = True)
+train['Married'].fillna(train['Married'].mode()[0], inplace = True)
+train['Dependents'].fillna(train['Dependents'].mode()[0], inplace = True)
+train['Self_Employed'].fillna(train['Self_Employed'].mode()[0], inplace = True)
+train['Credit_History'].fillna(train['Credit_History'].mode()[0], inplace = True)
+train['Loan_Amount_Term'].fillna(train['Loan_Amount_Term'].mode()[0], inplace = True)
+train.isnull().sum()
+
+# Imputing all numerical variables with their meadian ( not using mean because of outliers)
+train['LoanAmount'].fillna(train['LoanAmount'].median(), inplace = True)
+train.isnull().sum()
+# No more null values
+
+# Handling outliers
+from math import sqrt
+train['LoanAmount_log'] = np.log(train['LoanAmount'])
+train['LoanAmount_log'].plot.box() # Presence of outliers
+train['LoanAmount_log'].hist(bins =50)
+
+train['Total_income_log'] = np.log(train['Total_income_'])
+train['Total_income_log'].plot.box() # Presence of outliers
+
+# Pre-processing 
+from sklearn import preprocessing
+label_encoder = preprocessing.LabelEncoder()
+
+train['Gender']=label_encoder.fit_transform(train['Gender'])
+train['Married']=label_encoder.fit_transform(train['Married'])
+train['Dependents']=label_encoder.fit_transform(train['Dependents'])
+train['Education']=label_encoder.fit_transform(train['Education'])
+train['Self_Employed']=label_encoder.fit_transform(train['Self_Employed'])
+train['Property_Area']=label_encoder.fit_transform(train['Property_Area'])
+train['Loan_Status']=label_encoder.fit_transform(train['Loan_Status'])
+
+# Saving the cleaned train data
+train = train[['Gender', 'Married', 'Dependents', 'Education',
+       'Self_Employed', 'Total_income_log',
+       'Loan_Amount_Term', 'Credit_History', 'Property_Area',
+       'LoanAmount_log','Loan_Status']]
+
+pd.DataFrame(train, columns = ['Gender', 'Married', 'Dependents', 'Education',
+       'Self_Employed', 'Total_income_log',
+       'Loan_Amount_Term', 'Credit_History', 'Property_Area',
+       'LoanAmount_log','Loan_Status']).to_csv('train.csv', index=False)
+
+train.isnull().sum()
+
+# Importing 'test' and 'sample_submission' datasets
+test_original = pd.read_csv('test_lAUu6dG.csv')
+
+test = test_original.copy()
+test.isnull().sum()
+
+test['Gender'].fillna(test['Gender'].mode()[0], inplace = True)
+test['Dependents'].fillna(test['Dependents'].mode()[0], inplace = True)
+test['Self_Employed'].fillna(test['Self_Employed'].mode()[0], inplace = True)
+test['Credit_History'].fillna(test['Credit_History'].mode()[0], inplace = True)
+test['Loan_Amount_Term'].fillna(test['Loan_Amount_Term'].mode()[0], inplace = True)
+
+test['LoanAmount'].fillna(test['LoanAmount'].median(), inplace = True)
+test.isnull().sum()
+
+test['Gender']=label_encoder.fit_transform(test['Gender'])
+test['Married']=label_encoder.fit_transform(test['Married'])
+test['Dependents']=label_encoder.fit_transform(test['Dependents'])
+test['Education']=label_encoder.fit_transform(test['Education'])
+test['Self_Employed']=label_encoder.fit_transform(test['Self_Employed'])
+test['Property_Area']=label_encoder.fit_transform(test['Property_Area'])
+
+# Handling outliers
+test['LoanAmount_log'] = np.log(test['LoanAmount'])
+test['LoanAmount_log'].hist(bins =50)
+test['Total_income_log'] = np.log(test['ApplicantIncome'] + test['CoapplicantIncome'])
+test['Total_income_log'].hist(bins =50)
+test.columns
+
+test = test[['Gender', 'Married', 'Dependents', 'Education',
+       'Self_Employed', 'Total_income_log',
+       'Loan_Amount_Term', 'Credit_History', 'Property_Area',
+       'LoanAmount_log']]
+
+pd.DataFrame(test, columns= ['Gender', 'Married', 'Dependents', 'Education',
+       'Self_Employed', 'Total_income_log',
+       'Loan_Amount_Term', 'Credit_History', 'Property_Area',
+       'LoanAmount_log']).to_csv('test.csv', index = False)
+
+# Correlation between variables
+train_corr = train.corr()
+train['Total_income_log'].corr(train['LoanAmount_log'])
+f, ax = plt.subplots(figsize = (9,6))
+sns.heatmap(train_corr, square = True, vmax=0.8,cmap='BuPu')
+# There is no multi collinearity among independent variables
+
+
+## MODEL BUILDING ##
+from sklearn.model_selection import train_test_split
+
+train = pd.read_csv('train.csv')
+test = pd.read_csv('test.csv')
+sample_sub = pd.read_csv('sample_submission_49d68Cx.csv')
+test_original = pd.read_csv('test_lAUu6dG.csv')
+
+x = train.drop('Loan_Status', axis =1)
+y = train['Loan_Status']
+
+# Implementing SMOTE to balance the classes
+from imblearn.over_sampling import SMOTE
+
+oversample = SMOTE()
+x_bal, y_bal = oversample.fit_resample(x, y)
+
+
+## Using GridSearchCV to find key hyperparameters 
+
+## Logistic Regression
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.model_selection import GridSearchCV
+from sklearn.linear_model import LogisticRegression
+
+# Define models and parameters
+model1 = LogisticRegression()
+solvers = ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']
+penalty = ['l1', 'l2', 'elasticnet', 'none']
+c_values = [100, 10, 1.0, 0.1, 0.01]
+
+# Define grid search
+grid = dict(solver=solvers,penalty=penalty,C=c_values)
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+grid_search = GridSearchCV(estimator=model1, param_grid=grid, n_jobs=-1, cv=cv, scoring='accuracy',error_score=0)
+grid_result = grid_search.fit(x_bal, y_bal)
+
+# Summarize results
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+means = grid_result.cv_results_['mean_test_score']
+stds = grid_result.cv_results_['std_test_score']
+params = grid_result.cv_results_['params']
+for mean, stdev, param in zip(means, stds, params):
+    print("%f (%f) with: %r" % (mean, stdev, param))
+    
+# Building logistic regression model on obtained best parameters
+
+log_reg = LogisticRegression(C = 0.1, penalty= 'l1', solver = 'liblinear')
+log_reg.fit(x_bal,y_bal)
+pred_log_reg = log_reg.predict(test)
+
+# Saving results in the form of 'Sample_Submission'
+sample_sub1 = sample_sub
+sample_sub1['Loan_Status'] = pred_log_reg
+sample_sub1['Loan_ID'] = test_original['Loan_ID']
+
+sample_sub1['Loan_Status'].replace(1, 'Y', inplace =True)
+sample_sub1['Loan_Status'].replace(0, 'N', inplace =True)
+
+pd.DataFrame(sample_sub1, columns = ['Loan_ID','Loan_Status']).to_csv('logreg2.csv', index=False)
+
+## KNN
+
+from sklearn.neighbors import KNeighborsClassifier
+
+model2 = KNeighborsClassifier()
+n_neighbors = range(2, 10, 1)
+algorithms = ['auto', 'ball_tree', 'kd_tree', 'brute']
+weights = ['uniform', 'distance']
+metric = ['euclidean', 'manhattan', 'minkowski']
+
+# Define grid search
+grid = dict(n_neighbors=n_neighbors,weights=weights,metric=metric, algorithm = algorithms)
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+grid_search = GridSearchCV(estimator=model2, param_grid=grid, n_jobs=-1, cv=cv, scoring='accuracy',error_score=0)
+grid_result = grid_search.fit(x_bal, y_bal)
+
+# Summarize results
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+means = grid_result.cv_results_['mean_test_score']
+stds = grid_result.cv_results_['std_test_score']
+params = grid_result.cv_results_['params']
+for mean, stdev, param in zip(means, stds, params):
+    print("%f (%f) with: %r" % (mean, stdev, param))
+    
+    
+# Building KNN model on obtained best parameters
+
+knn = KNeighborsClassifier(algorithm = 'auto', metric = 'manhattan', n_neighbors=  2, weights = 'distance')
+knn.fit(x_bal,y_bal)
+pred_knn = knn.predict(test)
+
+sample_sub2 = sample_sub
+sample_sub2['Loan_Status'] = pred_knn
+sample_sub2['Loan_ID'] = test_original['Loan_ID']
+
+sample_sub2['Loan_Status'].replace(1, 'Y', inplace =True)
+sample_sub2['Loan_Status'].replace(0, 'N', inplace =True)
+
+pd.DataFrame(sample_sub2, columns = ['Loan_ID','Loan_Status']).to_csv('knn2.csv', index=False)
+    
+## Random forest
+
+from sklearn.ensemble import RandomForestClassifier
+# Define dataset
+# Define models and parameters
+model4 = RandomForestClassifier()
+n_estimators = [10, 100, 1000]
+max_features = ['sqrt', 'log2']
+
+# Define grid search
+grid = dict(n_estimators=n_estimators,max_features=max_features)
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+grid_search = GridSearchCV(estimator=model4, param_grid=grid, n_jobs=-1, cv=cv, scoring='accuracy',error_score=0)
+grid_result = grid_search.fit(x_bal, y_bal)
+
+# Summarize results
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+means = grid_result.cv_results_['mean_test_score']
+stds = grid_result.cv_results_['std_test_score']
+params = grid_result.cv_results_['params']
+for mean, stdev, param in zip(means, stds, params):
+    print("%f (%f) with: %r" % (mean, stdev, param))
+    
+random_forest = RandomForestClassifier(n_estimators= 1000 ,max_features= 'sqrt')
+random_forest.fit(x_bal, y_bal)
+pred_rn = random_forest.predict(test)
+
+sample_sub3 = sample_sub
+sample_sub3['Loan_Status'] = pred_rn
+sample_sub3['Loan_ID'] = test_original['Loan_ID']
+
+sample_sub3['Loan_Status'].replace(1, 'Y', inplace =True)
+sample_sub3['Loan_Status'].replace(0, 'N', inplace =True)
+
+pd.DataFrame(sample_sub3, columns = ['Loan_ID','Loan_Status']).to_csv('rf.csv', index=False)
+
+
+## Gradient boosting
+
+from sklearn.ensemble import GradientBoostingClassifier
+# Define dataset
+# Define models and parameters
+model = GradientBoostingClassifier()
+n_estimators = [10, 100]
+learning_rate = [0.001, 0.01, 0.1]
+subsample = [0.5, 0.7, 1.0]
+max_depth = [3, 7, 9]
+
+# Define grid search
+grid = dict(learning_rate=learning_rate, n_estimators=n_estimators, subsample=subsample, max_depth=max_depth)
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+grid_search = GridSearchCV(estimator=model, param_grid=grid, n_jobs=-1, cv=cv, scoring='accuracy',error_score=0)
+grid_result = grid_search.fit(x_bal, y_bal)
+
+# Summarize results
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+means = grid_result.cv_results_['mean_test_score']
+stds = grid_result.cv_results_['std_test_score']
+params = grid_result.cv_results_['params']
+for mean, stdev, param in zip(means, stds, params):
+    print("%f (%f) with: %r" % (mean, stdev, param))
+    
+gradient_boosting = GradientBoostingClassifier(learning_rate=0.01, n_estimators=100, subsample=0.7, max_depth=9)
+gradient_boosting.fit(x_bal, y_bal)
+pred_gre_boo = gradient_boosting.predict(test)
+
+sample_sub4 = sample_sub
+sample_sub4['Loan_Status'] = pred_gre_boo
+sample_sub4['Loan_ID'] = test_original['Loan_ID']
+
+sample_sub4['Loan_Status'].replace(1, 'Y', inplace =True)
+sample_sub4['Loan_Status'].replace(0, 'N', inplace =True)
+
+pd.DataFrame(sample_sub4, columns = ['Loan_ID','Loan_Status']).to_csv('gb.csv', index=False)
+
+
+## The best accuracy was obtained using 'Logistic Regression' of 77.77 %
